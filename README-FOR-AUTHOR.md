@@ -1,5 +1,50 @@
 # Read this before submitting
 
+## Round 5 update (READ THIS FIRST — folder cleaned, pushed to GitHub, label-clipping fixed)
+
+Three things happened this session, in order:
+
+**1. Cleaned this folder down to just what the submission needs.** Removed all regenerable knit
+byproducts (`csbewma-article.html/.tex/.log`, `RJwrapper.tex/.log`, the `csbewma-article_files/`
+figure-cache folders, the leftover `csbewma-article.R`) and two unused PNGs from an old
+pre-`rjtools` draft (`figures/figure1_plot.png`, `figures/figure2_plot.png`). What's left is
+exactly: `csbewma-article.Rmd`, `csbewma-article.pdf`, `RJreferences.bib`, `RJournal.sty`,
+`_Rpackages.txt`, `README.md`, `README-FOR-AUTHOR.md`, `HOW-TO-EDIT-AND-REKNIT.md`,
+`motivation-letter/motivation-letter.md`, and empty `data/`/`scripts/` placeholders for any
+reproducibility files you still want to add before submitting.
+
+**2. Pushed everything to `github.com/fmurital/csbewma-rjournal-paper`.** That repo only had
+Round 1's files in it before now (a stale README stub, an old bibliography, and an early draft of
+the `.Rmd`); this session's push brought it up to the current, verified state — same file set as
+this folder, plus a real `README.md` so the repo's GitHub landing page actually shows something
+useful instead of the one-line placeholder it had.
+
+**3. Fixed the "Signal at t = ..." label clipping in Figures 1, 2, and 4** that Round 4 flagged
+but left alone. The cause, confirmed by reading `plot.R`: `plot.csb_ewma()` and
+`plot_csb_ewma_direct()` both draw that label with `annotate("text", ..., hjust = 0)`, which
+left-aligns the text starting at the signal point; since the signal in this article's examples
+falls near the right end of the plotted series, the label ran past the panel's right edge and got
+clipped by ggplot2's default panel clipping. Rather than edit your installed CRAN package directly
+(this session only has access to this paper folder, not your package's source repository), I added
+a small, clearly-commented override chunk near the top of `csbewma-article.Rmd` (right after
+`load-packages`) that redefines `plot.csb_ewma()`, `plot_csb_ewma_direct()`, and
+`plot_chart_with_flagged()` for this document's build only, changing just `hjust = 0` to
+`hjust = 1` in the signal-label `annotate()` call in each — right-aligning the label so it ends at
+the signal point instead of starting there. Nothing else in those functions changed: no data,
+statistic, axis, or numerical result anywhere in the article is affected, only where that one text
+label sits. I re-knit the full document after adding it and read all 19 pages of the resulting PDF
+again: Figures 1, 2, and 4 now show the complete "Signal at t = ..." label fully inside the panel,
+page count is still 19, and nothing else changed.
+
+**For your next CRAN release:** the real fix belongs in your package's own `plot.R`, in both
+`plot.csb_ewma()` and `plot_csb_ewma_direct()` — change `hjust = 0` to `hjust = 1` in the
+`annotate("text", ...)` call that draws the signal label (the block right after
+`geom_point(data = signal_data, ...)` in each function). That's the only change needed; once it's
+in the package, the override chunk in this `.Rmd` becomes redundant and can be deleted.
+
+**Round 4's "one cosmetic issue" note above is now resolved** — see Round 4 below for what it
+originally described.
+
 ## Round 4 update (READ THIS FIRST — the paper now knits to a verified PDF)
 
 Working live in your RStudio this session (with your permission, driving the screen directly), I

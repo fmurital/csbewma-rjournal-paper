@@ -74,6 +74,91 @@ library(kableExtra)
 library(patchwork)
 ```
 
+```{r figure-label-patch, include=FALSE}
+# Local, display-only override for this article's build. The CRAN release of csbewma (v1.0.1)
+# draws the "Signal at t = ..." annotation in plot.csb_ewma() and plot_csb_ewma_direct() with
+# hjust = 0, which left-aligns the label starting at the signal point; because the signal in this
+# article's examples occurs near the right end of the plotted series, the label can run past the
+# panel's right edge. Right-aligning it (hjust = 1) keeps the label inside the panel. This changes
+# label justification only: no data, statistic, axis, or numerical result shown anywhere in this
+# article is affected. It is filed as a fix for the package's next CRAN release so that
+# plot.csb_ewma() and plot_csb_ewma_direct() draw the label this way by default going forward; see
+# README-FOR-AUTHOR.md for the corresponding upstream change to plot.R.
+plot.csb_ewma <- function(x, title = "CSB-EWMA Control Chart", show_signal = TRUE, ...) {
+  library(ggplot2)
+  if (!inherits(x, "csb_ewma")) stop("Object must be of class 'csb_ewma'")
+  t_values <- 1:x$T_sig
+  plot_data <- data.frame(t = t_values, r = x$r_history, UCL = x$UCL_history, LCL = x$LCL_history)
+  p <- ggplot(plot_data, aes(x = t)) +
+    geom_line(aes(y = r, color = "EWMA Statistic"), linewidth = 1) +
+    geom_line(aes(y = UCL, color = "UCL"), linetype = "dashed", linewidth = 0.8) +
+    geom_line(aes(y = LCL, color = "LCL"), linetype = "dashed", linewidth = 0.8) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "gray50", linewidth = 0.5) +
+    labs(title = title, x = "Time Point (t)", y = expression(r[t] ~ "(EWMA Statistic)"), color = "Series") +
+    scale_color_manual(values = c("EWMA Statistic" = "#1F7AB5", "UCL" = "#D62828", "LCL" = "#D62828")) +
+    theme_minimal(base_size = 12) +
+    theme(legend.position = "bottom", legend.title = element_text(face = "bold", size = 10),
+          legend.text = element_text(size = 9), plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+          axis.title = element_text(face = "bold", size = 11), axis.text = element_text(size = 9),
+          panel.grid.minor = element_blank(), panel.grid.major = element_line(color = "gray90", linewidth = 0.3),
+          panel.background = element_rect(fill = "white", color = NA), plot.background = element_rect(fill = "white", color = NA))
+  if (show_signal && x$signal_detected) {
+    signal_data <- data.frame(t = x$signal_time, r = x$r_history[x$signal_time])
+    p <- p + geom_point(data = signal_data, aes(x = t, y = r), color = "#D62828", size = 4.5, shape = 18) +
+      annotate("text", x = x$signal_time, y = x$r_history[x$signal_time] + 0.15,
+               label = paste("Signal at t =", x$signal_time), color = "#D62828", size = 3.5,
+               fontface = "bold", hjust = 1)
+  }
+  print(p)
+  invisible(p)
+}
+
+plot_csb_ewma_direct <- function(result, title = "CSB-EWMA Control Chart", show_signal = TRUE) {
+  library(ggplot2)
+  t_values <- 1:result$T_sig
+  plot_data <- data.frame(t = t_values, r = result$r_history, UCL = result$UCL_history, LCL = result$LCL_history)
+  p <- ggplot(plot_data, aes(x = t)) +
+    geom_line(aes(y = r, color = "EWMA Statistic"), linewidth = 1) +
+    geom_line(aes(y = UCL, color = "UCL"), linetype = "dashed", linewidth = 0.8) +
+    geom_line(aes(y = LCL, color = "LCL"), linetype = "dashed", linewidth = 0.8) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "gray50", linewidth = 0.5) +
+    labs(title = title, x = "Time Point (t)", y = expression(r[t] ~ "(EWMA Statistic)"), color = "Series") +
+    scale_color_manual(values = c("EWMA Statistic" = "#1F7AB5", "UCL" = "#D62828", "LCL" = "#D62828")) +
+    theme_minimal(base_size = 12) +
+    theme(legend.position = "bottom", legend.title = element_text(face = "bold", size = 10),
+          legend.text = element_text(size = 9), plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+          axis.title = element_text(face = "bold", size = 11), axis.text = element_text(size = 9),
+          panel.grid.minor = element_blank(), panel.grid.major = element_line(color = "gray90", linewidth = 0.3),
+          panel.background = element_rect(fill = "white", color = NA), plot.background = element_rect(fill = "white", color = NA))
+  if (show_signal && result$signal_detected) {
+    p <- p + geom_point(data = data.frame(t = result$signal_time, r = result$r_history[result$signal_time]),
+                        aes(x = t, y = r), color = "#D62828", size = 4.5, shape = 18) +
+      annotate("text", x = result$signal_time, y = result$r_history[result$signal_time] + 0.15,
+               label = paste("Signal at t =", result$signal_time), color = "#D62828", size = 3.5,
+               fontface = "bold", hjust = 1)
+  }
+  print(p)
+  invisible(p)
+}
+
+plot_chart_with_flagged <- function(chart_result, flagged_results, layout = "side") {
+  library(ggplot2)
+  library(patchwork)
+  p1 <- plot_csb_ewma_direct(chart_result, show_signal = TRUE)
+  p2 <- plot_flagged_streams(flagged_results, alpha = 0.05)
+  if (layout == "side") {
+    combined_plot <- p1 + p2 + plot_layout(ncol = 2, widths = c(1, 0.8))
+  } else {
+    combined_plot <- p1 / p2 + plot_layout(nrow = 2, heights = c(1, 0.8))
+  }
+  combined_plot <- combined_plot +
+    plot_annotation(title = "CSB-EWMA Diagnostic Dashboard",
+                     theme = theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16)))
+  print(combined_plot)
+  invisible(combined_plot)
+}
+```
+
 ## Introduction
 
 Statistical process control is a foundational methodology for monitoring, controlling, and
