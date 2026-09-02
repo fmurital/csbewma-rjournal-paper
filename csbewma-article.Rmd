@@ -26,22 +26,25 @@ author:
     - School of Data Science and Analytics, College of Computing and Software Engineering
     - Kennesaw, Georgia, United States of America
     email: fmurital@students.kennesaw.edu
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0002-5857-9874
   - name: Austin Brown
     affiliation: Kennesaw State University
     address:
     - School of Data Science and Analytics, College of Computing and Software Engineering
     - Kennesaw, Georgia, United States of America
+    orcid: 0000-0003-1530-0009
   - name: Dhrubajyoti Ghosh
     affiliation: Kennesaw State University
     address:
     - School of Data Science and Analytics, College of Computing and Software Engineering
     - Kennesaw, Georgia, United States of America
+    orcid: 0000-0002-3360-3786
   - name: Sherry Ni
     affiliation: Kennesaw State University
     address:
     - School of Data Science and Analytics, College of Computing and Software Engineering
     - Kennesaw, Georgia, United States of America
+    orcid: 0000-0003-0634-0025
 type: package
 output:
   rjtools::rjournal_article:
@@ -51,12 +54,10 @@ bibliography: RJreferences.bib
 ---
 
 ```{r setup, include=FALSE}
-# NOTE TO AUTHOR: this chunk and every eval=TRUE chunk below is written to run for real when you
-# knit this file locally (you have R, csbewma, ggplot2, and patchwork installed already, per your
-# earlier console sessions). Nothing in the "Illustrative use" section below is hand-typed output
-# -- every console message, print() block, and figure in that section is produced live by knitr
-# when you render this document, exactly as the R Journal's author instructions require ("Ensure
-# that R outputs are from an evaluation of R code rather than manually entering the outputs").
+# Every eval=TRUE chunk in this document runs for real at knit time -- nothing in the
+# "Illustrative use" section is hand-typed output. Every console message, print() block, and
+# figure there is produced live by knitr, per the R Journal's requirement that R outputs come
+# from an evaluation of R code rather than manual transcription.
 knitr::opts_chunk$set(
   echo = TRUE,
   comment = "",
@@ -65,8 +66,12 @@ knitr::opts_chunk$set(
 ```
 
 ```{r load-packages, include=FALSE}
+# kableExtra is a build-time dependency of this .Rmd (used to fit wide tables to the page width
+# below); it is not a dependency of the csbewma package itself.
 library(csbewma)
 library(ggplot2)
+library(kableExtra)
+library(patchwork)
 ```
 
 ## Introduction
@@ -248,7 +253,11 @@ knitr::kable(
   functions_df,
   caption = "Exported functions and S3 methods of csbewma 1.0.1, by functional group.",
   booktabs = TRUE
-)
+) %>%
+  kableExtra::column_spec(1, width = "1in") %>%
+  kableExtra::column_spec(2, width = "1.8in") %>%
+  kableExtra::column_spec(3, width = "2.6in") %>%
+  kableExtra::kable_styling(latex_options = c("scale_down", "hold_position"))
 ```
 
 The Illustrative use section below demonstrates the resulting workflow with real package output.
@@ -402,7 +411,7 @@ stream count.
 
 ### Plotting the chart
 
-```{r example1-plot, fig.cap="Output of plot(result) for the in-control example above, produced by the package's own plot.csb\\_ewma() method.", fig.alt="Control chart showing the EWMA trajectory as a blue line staying within widening dashed red control limit bands, with a red diamond marking the signal point."}
+```{r example1-plot, fig.cap="Output of plot(result) for the in-control example above, produced by the package's own plot.csb\\_ewma() method."}
 plot(result)
 ```
 
@@ -451,7 +460,7 @@ vector explicitly with `precompute_variance()` before calling `csb_ewma()` is op
 print(result2)
 ```
 
-```{r example2-plot, fig.cap="Output of plot(result2) for the shifted-stream example. The chart signals where the EWMA trajectory crosses the upper control limit.", fig.alt="Control chart showing the EWMA trajectory rising and crossing the upper dashed red control limit, marked with a red diamond at the signal point."}
+```{r example2-plot, fig.cap="Output of plot(result2) for the shifted-stream example. The chart signals where the EWMA trajectory crosses the upper control limit."}
 plot(result2)
 ```
 
@@ -475,6 +484,33 @@ direct illustration of the point developed formally in the Illustration subsecti
 attribution power depends on how much post-signal data is available, and improves as more data
 accumulates, which is exactly why `csb_ewma()`'s built-in post-hoc step and a later, separate call
 to `identify_ooc()` on more data can legitimately disagree.
+
+### Visualizing flagged streams
+
+Two visualization functions from Table 2 and the Visualization subsection above, `plot_flagged_streams()`
+and `plot_chart_with_flagged()`, have not yet been shown running. Both take the data frame returned
+by `identify_ooc()` as their `flagged_results` argument. `plot_flagged_streams(flagged_results,
+alpha = 0.05, title = "Stream P-values")` draws the per-stream $-\log_{10}(p)$ bar chart described
+above; applied to `full_results` from the full 500-column history just computed, it shows all
+three genuinely shifted streams in red:
+
+```{r example2-flagged-plot, fig.cap="Output of plot\\_flagged\\_streams(full\\_results, alpha = 0.05) for the second example above, using the full 500-column identify\\_ooc() results. Streams 1, 2, and 3, the genuinely shifted streams, are shown in red; unflagged streams are gray; the dashed line marks the alpha = 0.05 reference threshold on the -log10(p) scale."}
+plot_flagged_streams(full_results, alpha = 0.05)
+```
+
+`plot_chart_with_flagged(chart_result, flagged_results, layout = "side")` combines a control chart
+and a flagged-stream bar chart into one patchwork figure. Internally it builds this by calling
+`plot_csb_ewma_direct()` and `plot_flagged_streams()` in turn before combining their output, so a
+live call displays the two component plots individually before the combined dashboard; only the
+final, combined figure is kept below (`fig.keep = "last"`), since that combined dashboard is the
+function's intended result. Pairing `result2`, the chart object from the signal at $t=33$, with
+`full_results`, the fuller post-hoc picture from the full 500-column history, puts the original
+signal-time chart side by side with the more complete attribution that only the additional
+post-signal data makes possible, the same point made in prose above:
+
+```{r example2-dashboard-plot, fig.keep="last", fig.cap="Output of plot\\_chart\\_with\\_flagged(result2, full\\_results, layout = \"side\") for the second example above, pairing the original control chart (signal at t = 33) with the flagged-stream bar chart computed from the fuller 500-column history."}
+plot_chart_with_flagged(result2, full_results, layout = "side")
+```
 
 ## Chart parameter selection and detection performance
 
@@ -521,7 +557,8 @@ knitr::kable(
   optimal_df,
   caption = "Optimal EWMA chart design parameters by smoothing constant range, for target ARL0 = 370 and ARL0 = 500. Source: Muritala et al. (2026b, Table 2); Muritala (2026, Table 4.3.2).",
   booktabs = TRUE
-)
+) %>%
+  kableExtra::kable_styling(latex_options = c("scale_down", "hold_position"))
 ```
 
 ### Out-of-control detection and robustness across distributions
@@ -548,7 +585,8 @@ knitr::kable(
   arl1_df,
   caption = "ARL1 at delta = 0.20 (target ARL0 = 370) across four data-generating distributions, for each optimal (lambda, L) pair above. Source: Muritala et al. (2026b, Sec. 3.4); Muritala (2026, Table 4.3.3).",
   booktabs = TRUE
-)
+) %>%
+  kableExtra::kable_styling(latex_options = c("scale_down", "hold_position"))
 ```
 
 The maximum difference in ARL1 across the four distributions is zero for every reported
@@ -657,7 +695,9 @@ knitr::kable(
   posthocperf_df,
   caption = "Simulated performance of the four post-hoc methods, summarized across the delta and m conditions described above. Source: Muritala (2026, Sec. 5.3).",
   booktabs = TRUE
-)
+) %>%
+  kableExtra::column_spec(6, width = "1.6in") %>%
+  kableExtra::kable_styling(latex_options = c("scale_down", "hold_position"))
 ```
 
 Raw, uncorrected p-values are the most sensitive but are statistically unreliable for decision
